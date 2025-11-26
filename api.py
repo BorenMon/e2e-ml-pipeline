@@ -116,15 +116,13 @@ class PhoneFeatures(BaseModel):
 # Response model
 class PricePrediction(BaseModel):
     """Predicted price response"""
-    predicted_price_usd: float = Field(..., description="Predicted price in USD")
-    predicted_price_pkr: float = Field(..., description="Predicted price in PKR (converted)")
+    predicted_price: float = Field(..., description="Predicted price in USD")
     model_type: str = Field(..., description="Type of model used for prediction")
     
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "predicted_price_usd": 450.25,
-                "predicted_price_pkr": 125169.5,
+                "predicted_price": 450.25,
                 "model_type": "XGBRegressor"
             }
         }
@@ -158,7 +156,7 @@ async def predict_price(phone: PhoneFeatures):
     - **back_camera**: Back camera in MP (0-200)
     - **screen_size**: Screen size in inches (3-10)
     
-    Returns predicted price in USD and PKR
+    Returns predicted price in USD
     All predictions are logged to MLflow for tracking.
     """
     global prediction_count, total_prediction_time, prediction_history
@@ -185,10 +183,6 @@ async def predict_price(phone: PhoneFeatures):
         # Make prediction
         prediction = model.predict(features)[0]
         
-        # Convert to PKR (using approximate rate)
-        PKR_TO_USD_RATE = 278.0
-        price_pkr = prediction * PKR_TO_USD_RATE
-        
         # Calculate prediction time
         prediction_time = time.time() - start_time
         prediction_count += 1
@@ -207,8 +201,7 @@ async def predict_price(phone: PhoneFeatures):
                 mlflow.log_param("screen_size", phone.screen_size)
                 
                 # Log prediction results
-                mlflow.log_metric("predicted_price_usd", round(prediction, 2))
-                mlflow.log_metric("predicted_price_pkr", round(price_pkr, 2))
+                mlflow.log_metric("predicted_price", round(prediction, 2))
                 mlflow.log_metric("prediction_time_ms", prediction_time * 1000)
                 
                 # Log model info
@@ -223,7 +216,7 @@ async def predict_price(phone: PhoneFeatures):
                     "front_camera": float(phone.front_camera),
                     "back_camera": float(phone.back_camera),
                     "screen_size": float(phone.screen_size),
-                    "predicted_price_usd": round(prediction, 2),
+                    "predicted_price": round(prediction, 2),
                     "prediction_time_ms": round(prediction_time * 1000, 2)
                 }
                 mlflow.log_dict(features_dict, "prediction_details.json")
@@ -241,8 +234,7 @@ async def predict_price(phone: PhoneFeatures):
             prediction_history.pop(0)
         
         return PricePrediction(
-            predicted_price_usd=round(prediction, 2),
-            predicted_price_pkr=round(price_pkr, 2),
+            predicted_price=round(prediction, 2),
             model_type=type(model).__name__
         )
     
