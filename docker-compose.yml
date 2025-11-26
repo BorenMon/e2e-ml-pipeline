@@ -1,0 +1,26 @@
+name: e2e-ml-pipeline
+
+services:
+  e2e-ml-pipeline:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: e2e-ml-pipeline
+    ports:
+      # FastAPI Ports
+      - "${FASTAPI_PORT}:8000"
+      # MLflow UI Port
+      - "${MLFLOW_UI_PORT}:5000"
+      # Streamlit Port
+      - "${STREAMLIT_PORT}:8501"
+    volumes:
+      - .:/app # To support hot reloading
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - e2e-ml-pipeline-network
+
+networks:
+  e2e-ml-pipeline-network:
+    driver: bridge
